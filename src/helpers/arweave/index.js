@@ -58,33 +58,6 @@ export const getWalletTransactions = async (walletAddress) => {
 	return arweaveTransactions;
 }
 
-export const checkIfUserOnboarded = async (walletAddress) => {
-	let userOnboarded = false;
-
-	try {
-        const arweaveTransactions = await arweave.arql({
-		      op: "and",
-			  expr1: {
-			    op: "equals",
-			    expr1: "from",
-			    expr2: walletAddress
-			  },
-			  expr2: {
-			    op: "equals",
-			    expr1: "wevr-user-onboarded",
-			    expr2: "yes"
-			  }
-		});
-
-		userOnboarded = arweaveTransactions.length > 0 ? true : false;
-	}
-	catch(error) {
-      console.log("unable to get wallet transactions");
-	}
-
-	return userOnboarded;
-}
-
 export const getTransactionDetails = async (transactionId) => {
 	let transactionDetails = null;
 
@@ -99,27 +72,6 @@ export const getTransactionDetails = async (transactionId) => {
 	return transactionDetails;
 }
 
-
-export const setUserAsOnboarded = async (userWallet, data) => {
-	let userOnboarded = false;
-
-	try {
-       let transaction = await arweave.createTransaction({ data: data }, userWallet);
-	   transaction.addTag('wevr-user-onboarded', 'yes');
-
-	   await arweave.transactions.sign(transaction, userWallet);
-
-	   const response = await arweave.transactions.post(transaction);
-       userOnboarded = response.status === 200 ? true : false;
-	}
-	catch (error) {
-		console.error(error);
-		console.error("unable to onboard user");
-	}
-	
-	return userOnboarded;
-}
-
 export const saveMemo = async(userWallet, data) => {
 	let memoSaved = false;
 
@@ -127,7 +79,7 @@ export const saveMemo = async(userWallet, data) => {
        let transaction = await arweave.createTransaction({ data: data.memo}, userWallet);
 	   transaction.addTag('wevr-memo-date-added', data.dateAdded);
 	   transaction.addTag('wevr-memo-location', data.memoLocation);
-	   transaction.addTag('wevr-memo', 'yes');
+	   transaction.addTag('wevr-memo-saved', 'yes');
 
 	   await arweave.transactions.sign(transaction, userWallet);
 
@@ -143,10 +95,10 @@ export const saveMemo = async(userWallet, data) => {
 }
 
 export const getUserMemos = async (walletAddress) => {
-	let userMemos = false;
+	let userMemos = [];
 
 	try {
-        const arweaveTransactions = await arweave.arql({
+        userMemos = await arweave.arql({
 		      op: "and",
 			  expr1: {
 			    op: "equals",
@@ -155,15 +107,15 @@ export const getUserMemos = async (walletAddress) => {
 			  },
 			  expr2: {
 			    op: "equals",
-			    expr1: "wevr-memo",
+			    expr1: "wevr-memo-saved",
 			    expr2: "yes"
 			  }
 		});
-
-		
+  
 	}
 	catch(error) {
-      console.log("unable to get wallet transactions");
+	  console.log(error);
+      console.log("unable to get user memos");
 	}
 
 	return userMemos;

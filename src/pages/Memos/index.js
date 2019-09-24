@@ -2,7 +2,7 @@ import React from 'react';
 import {Row, Col, Card, Button, Table  } from 'react-bootstrap';
 import Aux from "../../hoc/_Aux";
 import { connect } from 'react-redux';
-import { saveMemo } from "../../helpers/arweave";
+import { saveMemo, getUserMemos, getTransactionDetails } from "../../helpers/arweave";
 import { getUserLocationData  } from "../../helpers/location";
 import vmsg from "vmsg";
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
@@ -53,11 +53,14 @@ class VoiceMemos extends React.Component {
         this.startRecordingMemo = this.startRecordingMemo.bind(this);
         this.stopRecordingMemo = this.stopRecordingMemo.bind(this);
         this.saveMemoToArweave = this.saveMemoToArweave.bind(this);
+        this.fetchUserMemos = this.fetchUserMemos.bind(this);
     }
 
     componentDidMount() {
         if (!this.hasGetUserMedia()) {
             alert('Sorry, It seems your browser does not support audio record capabilities');
+        } else {
+            this.fetchUserMemos();
         }
     }
 
@@ -118,19 +121,42 @@ class VoiceMemos extends React.Component {
         });
     }
 
+    async fetchUserMemos() {
+        try{
+
+            const userMemos = await getUserMemos(this.props.userArweaveAddress);
+            userMemos
+            .forEach(async (userMemoTx) => {
+
+                const transaction =  await getTransactionDetails(userMemoTx);
+                console.log(transaction.get('data', {decode: true, string: true}));
+            
+                transaction.get('tags').forEach(tag => {
+                    let key = tag.get('name', {decode: true, string: true});
+                    let value = tag.get('value', {decode: true, string: true});
+                    console.log(`${key} : ${value}`);
+                });
+
+            });
+
+        }
+        catch (error) {
+            console.error(error);
+        }
+    }
+
     async saveMemoToArweave(base64Audio) {
         try {
           const userLocationData = await getUserLocationData();
-          console.log(userLocationData);
           const dateAdded = moment().format('MMMM Do YYYY, h:mm:ss a');
           const memo = {
             memo: base64Audio,
             dateAdded: dateAdded,
-            memoLocation: userLocationData.region
-          }
-
+            memoLocation: userLocationData.regionName
+          };
+             console.log(memo);
           const memoAdded = await saveMemo(this.props.userWallet, memo);
-          console.log(memoAdded);
+        console.log(memoAdded);
 
         }
         catch(error) {
