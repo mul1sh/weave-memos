@@ -45,8 +45,10 @@ class VoiceMemos extends React.Component {
             isRecording: false,
             isSaving: false,
             memos: [],
+            localMemos: [],
             countDownTimer: 0,
-            savingMemoText: "Your memo is being saved to the arweave blockchain...."
+            savingMemoText: "Your memo is being saved to the arweave blockchain....",
+            currentBlob: null
         }
 
         // bind my local methods
@@ -126,6 +128,9 @@ class VoiceMemos extends React.Component {
     async stopRecordingMemo() {
         window.clearInterval(this.state.intervalId);
         const blob = await recorder.stopRecording();
+
+        // set the current blob
+        this.setState({ currentBlob: blob });
         this.setState({ isRecording: false });
         this.setState({ isSaving: true });
 
@@ -142,16 +147,30 @@ class VoiceMemos extends React.Component {
     async saveMemoToArweave(base64Audio) {
         try {
           const userLocationData = await getUserLocationData();
-          console.log(userLocationData);
+     
           const dateAdded = moment().format('MMMM Do YYYY, h:mm:ss a');
           const memo = {
             memo: base64Audio,
             dateAdded: dateAdded,
             memoLocation: userLocationData.district
           };
+
+
+          let localMemo = Object.assign({}, memo);
+
+          localMemo.soundMemo = URL.createObjectURL(this.state.currentBlob);
+
+
+          const localMemos = this.state.localMemos.concat(localMemo);
+
+
+
           const memoAdded = await saveMemo(this.props.userWallet, memo);
 
           if(memoAdded) { 
+
+            // update the local memos
+            this.setState({ localMemos: localMemos });
 
             this.setState({savingMemoText: "Your memo has been saved to the arweave blockchain, in a few minutes it will show up below after it is mined :) "});
             
@@ -194,7 +213,30 @@ class VoiceMemos extends React.Component {
                     let value = tag.get('value', {decode: true, string: true});
 
                     if(key === "wevr-memo-date-added") {
-                        memo.dateAdded = moment(value, 'MMMM Do YYYY, h:mm:ss a');
+                        const dateAdded = moment(value, 'MMMM Do YYYY, h:mm:ss a');
+                        memo.dateAdded = dateAdded;
+
+                        // check if there is a local memo that matches this date and remove 
+                        const localMemos = Object.assign([],this.state.localMemos);
+                        let deleteIndex = undefined;
+
+                        localMemos.filter((lm, index) => {
+                            
+                            const lmDA = moment(lm.dateAdded, 'MMMM Do YYYY, h:mm:ss a');
+                
+                            if(dateAdded.isSame(lmDA)) {
+                                deleteIndex = index;
+                            }
+
+                        });
+
+                        if(deleteIndex !== undefined) {
+                            // delete it from the local memos
+                            localMemos.splice(deleteIndex, 1);
+
+                            this.setState({ localMemos: localMemos });
+                        }
+
                     }
 
                     if(key === "wevr-memo-location") {
@@ -223,7 +265,7 @@ class VoiceMemos extends React.Component {
    
     render() {
 
-        const { isRecording, isSaving, memos, countDownTimer, savingMemoText } = this.state;
+        const { isRecording, isSaving, memos, countDownTimer, savingMemoText, localMemos } = this.state;
 
         return (
             <Aux>
@@ -351,13 +393,51 @@ class VoiceMemos extends React.Component {
                             </Card.Body>
                         </Card>
                     </Col>
+                     {
+                        localMemos.length > 0 
+                        ?
+                        <Col md={12} xl={12}>
+                            <Card>
+                                <Card.Header>
+                                    <Card.Title as='h5'>Memo's being Mined</Card.Title>
+                                </Card.Header>
+                                <Card.Body>
+                                Please note these memo's are going to be removed from this table as soon as they are mined from Arweave
+                                   <Table responsive hover>
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Location</th>
+                                                <th>Date Added</th>
+                                                <th>Memo</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {localMemos.reverse().map((localMemo, index) => (
+                                                 <tr className="unread" key={index}>
+                                                    <td>{(index + 1)}</td>
+                                                    <td>{localMemo.memoLocation}</td>
+                                                    <td>{localMemo.dateAdded}</td>
+                                                    <td>
+                                                        <audio src={localMemo.soundMemo} controls />
+                                                    </td>
+                                                 </tr>
+                                            ))}     
+                                        </tbody>
+                                    </Table>
+                                </Card.Body>
+                            </Card>
+                        </Col>
+                        :
+                        null
+                    }   
                     {
                         memos.length > 0 
                         ?
                         <Col md={12} xl={12}>
                             <Card>
                                 <Card.Header>
-                                    <Card.Title as='h5'>Your Memo's</Card.Title>
+                                    <Card.Title as='h5'>Your Memo's in Arweave</Card.Title>
                                 </Card.Header>
                                 <Card.Body>
                                    <Table responsive hover>

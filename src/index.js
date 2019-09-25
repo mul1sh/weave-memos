@@ -8,7 +8,6 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App/index';
 import * as serviceWorker from './serviceWorker';
 import reducer from './store/reducer';
-import config from './config';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const store = createStore(
@@ -18,7 +17,7 @@ const store = createStore(
 
 const app = (
     <Provider store={store}>
-        <BrowserRouter basename={config.basename}>
+        <BrowserRouter>
             {/* basename="/arweave sounds" */}
             <App />
         </BrowserRouter>
