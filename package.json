@@ -2,7 +2,7 @@
   "name": "weave-voice-memos",
   "version": "0.1.0",
   "private": true,
-  "description": "Weave Audio Notes is a tool for people to take audio notes and store them securely in the blockchain using arweave",
+  "description": "Weave Voice Memos is a tool for people to take audio notes and store them securely in the blockchain using arweave",
   "dependencies": {
     "arweave": "^1.4.1",
     "bootstrap": "^4.3.1",
