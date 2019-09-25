@@ -1,10 +1,10 @@
 ## Weave Voice Memos
 
+https://arweave.net/3ByttrTlQid3lcqWwuOLhdffy5HiuncYiTAL-JSj-S0
+
 This is a permaweb app that allows users to create and securely save voice memo's in the arweave blockchain.
 
 After the memo's are saved in arweave, they are displayed back in the app for the user to replay and also download to their respective device.
-
-The app is hosted in arweave in the link 
 
 ## Install and Run
 
@@ -15,6 +15,6 @@ The app is hosted in arweave in the link
 
 After the release of this MVP, i'm now working on adding the following features to make the app even more delightful to use
 
-1. Ability to share memo's to social media.
-2. Ability to also add video memo's too, once the file upload limit has been removed from arweave.
+[ ] Ability to share memo's to social media.
+[ ] Ability to also add video memo's too, once the file upload limit has been removed from arweave.
 
