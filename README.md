@@ -17,4 +17,5 @@ After the release of this MVP, i'm now working on adding the following features 
 
  - Ability to share memo's to social media.
  - Ability to also add video memo's too, once the file upload limit has been removed from arweave.
+ - Use a different encoder to improve the sound quality of the memo, whilst having it a small size
 
