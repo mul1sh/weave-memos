@@ -1,5 +1,5 @@
 import React from 'react';
-import {Row, Col, Card, Button, Table  } from 'react-bootstrap';
+import {Row, Col, Card, Button, Table, Spinner, Alert } from 'react-bootstrap';
 import Aux from "../../hoc/_Aux";
 import { connect } from 'react-redux';
 import { saveMemo, getUserMemos, getTransactionDetails } from "../../helpers/arweave";
@@ -32,6 +32,8 @@ const b64toBlob = async (b64Data, contentType='audio/mpeg') => {
   return blob;
 };
 
+let saveTimer = null;
+
 
 class VoiceMemos extends React.Component {
 
@@ -44,7 +46,8 @@ class VoiceMemos extends React.Component {
             isRecording: false,
             isSaving: false,
             memos: [],
-            countDownTimer: 0
+            countDownTimer: 0,
+            savingMemoText: "Your memo is being saved to the arweave blockchain...."
         }
 
         // bind my local methods
@@ -62,6 +65,10 @@ class VoiceMemos extends React.Component {
         } else {
             this.fetchUserMemos();
         }
+    }
+
+    componentWillUnmount() {
+
     }
 
     hasGetUserMedia() {
@@ -114,36 +121,18 @@ class VoiceMemos extends React.Component {
     async stopRecordingMemo() {
         clearInterval(this.state.intervalId);
         const blob = await recorder.stopRecording();
+        this.setState({ isRecording: false });
+        this.setState({ isSaving: true });
+
         const that = this;
+        // convert the memo to base64
         blobToBase64(blob, (base64) =>{
-            that.setState({ isRecording: false, countDownTimer: 0 });
+            that.setState({ countDownTimer: 0 });
             that.saveMemoToArweave(base64);
+        
         });
     }
 
-    async fetchUserMemos() {
-        try{
-
-            const userMemos = await getUserMemos(this.props.userArweaveAddress);
-            userMemos
-            .forEach(async (userMemoTx) => {
-
-                const transaction =  await getTransactionDetails(userMemoTx);
-                console.log(transaction.get('data', {decode: true, string: true}));
-            
-                transaction.get('tags').forEach(tag => {
-                    let key = tag.get('name', {decode: true, string: true});
-                    let value = tag.get('value', {decode: true, string: true});
-                    console.log(`${key} : ${value}`);
-                });
-
-            });
-
-        }
-        catch (error) {
-            console.error(error);
-        }
-    }
 
     async saveMemoToArweave(base64Audio) {
         try {
@@ -154,20 +143,78 @@ class VoiceMemos extends React.Component {
             dateAdded: dateAdded,
             memoLocation: userLocationData.regionName
           };
-             console.log(memo);
           const memoAdded = await saveMemo(this.props.userWallet, memo);
-        console.log(memoAdded);
 
+          if(memoAdded) { 
+
+            this.setState({savingMemoText: "Your memo has been saved to the arweave blockchain, in a few minutes it will show up below after it is mined :) "});
+            const that = this;
+            saveTimer = setTimeout(function(){
+                 that.setState({ savingMemoText: "Your memo is being saved to the arweave blockchain....", isSaving: false });
+
+                window.clearTimeout(saveTimer);
+            }, 3000)
+           
+          }
         }
         catch(error) {
             console.error(error);
         }
 
     }
+
+    async fetchUserMemos() {
+        let memos = [];
+        try
+        {
+            const userMemos = await getUserMemos(this.props.userArweaveAddress);
+
+            // decode the arweave transactions
+            userMemos
+            .forEach(async (userMemoTx) => {
+
+                let memo = {};
+
+                const transaction =  await getTransactionDetails(userMemoTx);
+                const decodedTransaction = transaction.get('data', {decode: true, string: true});
+              
+                memo.soundMemo = URL.createObjectURL(await b64toBlob(decodedTransaction));
+
+                transaction.get('tags').forEach(tag => {
+                    let key = tag.get('name', {decode: true, string: true});
+                    let value = tag.get('value', {decode: true, string: true});
+
+                    if(key === "wevr-memo-date-added") {
+                        memo.dateAdded = moment(value, 'MMMM Do YYYY, h:mm:ss a');
+                    }
+
+                    if(key === "wevr-memo-location") {
+                        memo.location = value;
+                    }
+                });
+                memos.push(memo);
+
+                if(memos.length === userMemos.length) {
+                    // sort the memo's by date
+                    const sortedMemos = memos.sort((a,b) => a.dateAdded - b.dateAdded);
+                    // then reverse the dates to get the newest date first
+                    const reversedMemos = sortedMemos.reverse();
+                    // finally update the memo's
+                    this.setState({ memos: reversedMemos });
+                }
+            });
+
+
+        }
+        catch (error) {
+            console.error(error);
+        }
+    }
+
    
     render() {
 
-        const { isRecording, memos, countDownTimer } = this.state;
+        const { isRecording, isSaving, memos, countDownTimer, savingMemoText } = this.state;
 
         return (
             <Aux>
@@ -202,14 +249,14 @@ class VoiceMemos extends React.Component {
                                         <br/>
                                         <div className="d-flex align-items-center justify-content-center">
                                             {
-                                                isRecording ? 
+                                                isRecording & !isSaving ? 
                                                 <div className="d-flex align-items-center justify-content-center">
                                                    
                                                    <Button 
                                                         variant="danger"
                                                         onClick={ this.stopRecordingMemo}
                                                     >
-                                                       Recording...
+                                                       Stop Recording Memo!
                                                     </Button>
                                                     &nbsp;&nbsp;
                                                     <div  style={{ width: 50 }} >
@@ -225,18 +272,38 @@ class VoiceMemos extends React.Component {
                                                                       })}
                                                                 />
                                                     </div>
-                                                </div>
-                                                
+                                                </div>  
                                                 :
-                                                <Button 
-                                                    variant="primary"
-                                                    onClick={ this.handleMicAccess}
-                                                >
-                                                  Record Memos
-                                                </Button> 
+                                                !isRecording & !isSaving ? 
+                                                    <Button 
+                                                        variant="primary"
+                                                        onClick={ this.handleMicAccess}
+                                                    >
+                                                      Start Recording Memo
+                                                    </Button> 
+                                                    : 
+                                                    <Alert variant="primary">
+                                                         <Spinner
+                                                              as="span"
+                                                              animation="grow"
+                                                              size="sm"
+                                                              role="status"
+                                                              aria-hidden="true"
+                                                        /> 
+                                                        &nbsp;&nbsp;
+                                                        {savingMemoText}
+                                                    </Alert>
                                             }
                                            
-                                           
+                                           {
+                                              !isRecording && isSaving ? 
+                                                <div className="d-flex align-items-center justify-content-center">
+                                                   
+                                                   
+                                                </div>
+                                                :
+                                                null
+                                           }
                                         </div>
 
                                     </div>
@@ -248,7 +315,7 @@ class VoiceMemos extends React.Component {
                     <Col md={4} xl={4}>
                         <Card>
                             <Card.Body>
-                                <h4 className='mb-4'>Arweave Wallet Settings</h4>
+                                <h4 className='mb-4'>Arweave Wallet</h4>
                                 <div className="row d-flex align-items-center">
                                     <div className="col-8">
                                     Address: 
@@ -282,13 +349,22 @@ class VoiceMemos extends React.Component {
                                 </Card.Header>
                                 <Card.Body>
                                    <Table responsive hover>
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Location</th>
+                                                <th>Date Added</th>
+                                                <th>Memo</th>
+                                            </tr>
+                                        </thead>
                                         <tbody>
-                                            {memos.map((url, index) => (
-                                                 <tr className="unread" key={url}>
-                                                    <td>Memo {(index + 1)}</td>
-                                                    <td>Memo {(index + 1)}</td>
+                                            {memos.map((memo, index) => (
+                                                 <tr className="unread" key={index}>
+                                                    <td>{(index + 1)}</td>
+                                                    <td>{memo.location}</td>
+                                                    <td>{memo.dateAdded.format('MMMM Do YYYY, h:mm:ss a')}</td>
                                                     <td>
-                                                        <audio src={url} controls />
+                                                        <audio src={memo.soundMemo} controls />
                                                     </td>
                                                  </tr>
                                             ))}     
