@@ -142,11 +142,12 @@ class VoiceMemos extends React.Component {
     async saveMemoToArweave(base64Audio) {
         try {
           const userLocationData = await getUserLocationData();
+          console.log(userLocationData);
           const dateAdded = moment().format('MMMM Do YYYY, h:mm:ss a');
           const memo = {
             memo: base64Audio,
             dateAdded: dateAdded,
-            memoLocation: userLocationData.regionName
+            memoLocation: userLocationData.district
           };
           const memoAdded = await saveMemo(this.props.userWallet, memo);
 
