@@ -15,6 +15,6 @@ After the memo's are saved in arweave, they are displayed back in the app for th
 
 After the release of this MVP, i'm now working on adding the following features to make the app even more delightful to use
 
-[ ] Ability to share memo's to social media.
-[ ] Ability to also add video memo's too, once the file upload limit has been removed from arweave.
+ - Ability to share memo's to social media.
+ - Ability to also add video memo's too, once the file upload limit has been removed from arweave.
 
