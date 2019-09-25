@@ -22,9 +22,6 @@ class App extends Component {
         userLoggedIn: false
       };
     }
-    componentDidMount() {
-      console.log(this.state);
-    }
 
     componentDidUpdate(prevProps) {
     

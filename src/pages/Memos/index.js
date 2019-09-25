@@ -32,8 +32,7 @@ const b64toBlob = async (b64Data, contentType='audio/mpeg') => {
   return blob;
 };
 
-let saveTimer = null;
-
+let fetchMemosIntervalId = null;
 
 class VoiceMemos extends React.Component {
 
@@ -64,11 +63,17 @@ class VoiceMemos extends React.Component {
             alert('Sorry, It seems your browser does not support audio record capabilities');
         } else {
             this.fetchUserMemos();
+            const that = this;
+            // fetch the memos in 30 second intervals
+            fetchMemosIntervalId = setInterval(function(){
+                that.fetchUserMemos();
+            }, 30000);
         }
     }
 
     componentWillUnmount() {
-
+        // clear the fetch memo's interval
+        window.clearInterval(fetchMemosIntervalId);
     }
 
     hasGetUserMedia() {
@@ -119,7 +124,7 @@ class VoiceMemos extends React.Component {
     }
 
     async stopRecordingMemo() {
-        clearInterval(this.state.intervalId);
+        window.clearInterval(this.state.intervalId);
         const blob = await recorder.stopRecording();
         this.setState({ isRecording: false });
         this.setState({ isSaving: true });
@@ -148,7 +153,10 @@ class VoiceMemos extends React.Component {
           if(memoAdded) { 
 
             this.setState({savingMemoText: "Your memo has been saved to the arweave blockchain, in a few minutes it will show up below after it is mined :) "});
+            
             const that = this;
+            let saveTimer = null;
+
             saveTimer = setTimeout(function(){
                  that.setState({ savingMemoText: "Your memo is being saved to the arweave blockchain....", isSaving: false });
 
@@ -229,7 +237,7 @@ class VoiceMemos extends React.Component {
                                         <br/>
                                         <h6 className='f-w-300 d-flex align-items-center m-b-0'>
                                         {
-                                            isRecording ? 
+                                            isRecording & !isSaving ? 
                                             <div>
                                                 <span>
                                                     Your voice memo is now being recorded, &nbsp;<strong>click on the button below</strong>&nbsp; to stop the recording and save the memo in arweave :)
@@ -240,9 +248,12 @@ class VoiceMemos extends React.Component {
                                                 </span>
                                             </div>
                                             : 
+
+                                            !isRecording & !isSaving ? 
                                             <span>
                                                 Please&nbsp;<strong>click</strong>&nbsp;on the button below, to&nbsp;<strong>start</strong>&nbsp;recording your voice memos.
                                             </span>
+                                            : null
                                         }
                                         </h6>
                 
