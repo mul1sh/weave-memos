@@ -7,7 +7,7 @@
     "arweave": "^1.4.1",
     "bootstrap": "^4.3.1",
     "font-awesome": "^4.7.0",
-    "jquery": "^3.4.0",
+    "jquery": "^3.5.0",
     "moment": "^2.24.0",
     "node-sass": "^4.12.0",
     "prop-types": "^15.7.2",
